@@ -49,9 +49,9 @@ app.on('activate', () => {
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
-ipcMain.on('async-crawl', (event, arg) => {
+ipcMain.on('async-crawl', async (event, arg) => {
   console.log("async-crawl event");
-  initiate(arg);
+  await initiate(arg);
 });
 
 ipcMain.on('new-link-visited', (event, arg) => {

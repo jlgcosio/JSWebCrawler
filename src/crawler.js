@@ -29,7 +29,6 @@ async function initiate(url) {
 			try {
 				console.log("Creating new page");
 				const tab = await browser.newPage();
-                console.log(tab);
 				console.log("Opening: ", u);
 				await tab.goto(u);
 				await tab.waitForTimeout(1000);
@@ -60,7 +59,7 @@ async function initiate(url) {
 
 	// Call for actual crawling
 	console.log(`Extracting all links of ${baseUrl}`);
-	extractAllLinks(baseUrl);
+	await extractAllLinks(baseUrl);
 
 	// Close browser instance
 	await browser.close();
