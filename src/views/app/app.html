@@ -3,8 +3,9 @@
 
 <head>
   <meta charset="UTF-8">
-  <title>Title</title>
+  <title>Web Crawler</title>
   <link rel="stylesheet" href="../../css/bootstrap.min.css">
+  <link rel="stylesheet" href="../../css/index.css">
   <script src="./app.js"></script>
 </head>
 
@@ -14,11 +15,10 @@
     <div class="row">
       <label for="urlInput" class="col-auto col-form-label">Enter URL to monitor:</label>
       <div class="col-auto col-lg-8">
-        <input type="text" name="urlInput" id="urlInput" class="form-control"
-          placeholder="https://www.google.com/">
+        <input type="text" name="urlInput" id="urlInput" class="form-control" placeholder="https://www.google.com/">
       </div>
       <div class="col-auto">
-        <button class="btn btn-primary" onclick="initiate()">Submit</button>
+        <button class="btn btn-primary" id="submitButton" onclick="initiate()">Submit</button>
       </div>
     </div>
 
@@ -28,13 +28,37 @@
     </div>
 
     <div class="row pt-3 mb-2">
-      <div class="col">
+      <div class="col overflow-auto">
         <div class="card">
           <div class="card-header">
-            Total links checked: <span id="linksVisited" class="badge badge-primary badge-pill"></span>
+            <span id="linksVisited" class="badge badge-primary badge-pill"></span>
+            Total links checked: 
           </div>
           <ul class="list-group list-group-flush" id="linkList">
           </ul>
+        </div>
+      </div>
+      <div class="col-4">
+        <div class="form-group">
+          <label for="filterInput">Keywords to check in pages: (one per line)</label>
+          <textarea class="form-control" id="filterInput" rows="20">
+Guarantee
+Guaranteed
+Millions
+$1000s
+Work part time
+Cures COVID
+Cures virus
+Cures cancer
+Cures depression
+Cures ADD
+Cures ADHD
+Cures any health ailment
+Ferrari
+Lamborghini
+Gold
+Lifestyle
+Promise</textarea>
         </div>
       </div>
     </div>
