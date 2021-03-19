@@ -15,14 +15,67 @@ function addToList(href) {
 	list.appendChild(item);
 }
 
-function clearList() {
+function clearInfo() {
     var list = document.getElementById("linkList");
     list.innerHTML = "";
+
+    var infoSection = document.getElementById('infoSection');
+    infoSection.innerHTML = "";
+
+    var totalVisitedCounter = document.getElementById('linksVisited');
+    totalVisitedCounter.innerHTML = "";
+}
+
+function updateTotalLinks(total) {
+    var totalLinksCounter = document.getElementById('totalLinks');
+    totalLinksCounter.innerHTML = total;
+}
+
+function updateTotalVisited(number) {
+    var totalVisitedCounter = document.getElementById('linksVisited');
+    totalVisitedCounter.innerHTML = number;
+}
+
+function toggleInfoComplete(){
+    var infoPanel = document.getElementById('infoPanel');
+    infoPanel.setAttribute('class', 'alert alert-success');
+
+    var infoSuccess = document.createElement('p');
+    infoPanel.textContent = "Complete";
+
+    var line = document.createElement('hr');
+
+    infoPanel.appendChild(line);
+    infoPanel.appendChild(infoSuccess);
+}
+
+function showInfo(url){
+    var infoSection = document.getElementById('infoSection');
+
+    var infoPanel = document.createElement('div');
+    infoPanel.setAttribute('class', 'alert alert-primary');
+    infoPanel.setAttribute('id', 'infoPanel');
+    infoPanel.setAttribute('role', 'alert');
+
+    var infoPanelHeader = document.createElement('h4');
+    infoPanelHeader.setAttribute('class', 'alert-header');
+    infoPanelHeader.textContent = `Crawling through webiste: ${url}`;
+
+    var line = document.createElement('hr');
+
+    var infoTotalCount = document.createElement('p');
+    infoTotalCount.innerHTML = 'Total links gathered: <span id="totalLinks" class="badge badge-primary badge-pill">0</span>';
+
+    infoPanel.appendChild(infoPanelHeader);
+    infoPanel.appendChild(line);
+    infoPanel.appendChild(infoTotalCount);
+
+    infoSection.appendChild(infoPanel);
 }
 
 async function initiate() {
     // Clear current list
-    clearList();
+    clearInfo();
 
 	var url = getUrl();
 
@@ -36,6 +89,8 @@ async function initiate() {
 	if (!url.includes("http")) {
 		url = "https://" + url;
 	}
+    showInfo(url);
+
 	// Instatiate Arrays
 	var sitemap = [];
 	var currPageInSiteMap = 0;
@@ -88,6 +143,8 @@ async function initiate() {
 			});
             // Move to next item in sitemap
 			currPageInSiteMap++;
+            updateTotalLinks(sitemap.length);
+            updateTotalVisited(currPageInSiteMap);
 			tab.close();
 			await extractAllLinks(sitemap[currPageInSiteMap]);
 		}
@@ -98,5 +155,6 @@ async function initiate() {
 	// Close browser instance
 	await browser.close();
 
+    toggleInfoComplete();
 	ipcRenderer.sendSync("console-display", sitemap);
 }
