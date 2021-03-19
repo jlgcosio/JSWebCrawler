@@ -20,7 +20,6 @@ const createWindow = () => {
 
   // and load the index.html of the app.
   mainWindow.loadFile(path.join(__dirname, '/views/app/app.html'));
-
   // Open the DevTools.
   // mainWindow.webContents.openDevTools();
 };
@@ -49,11 +48,8 @@ app.on('activate', () => {
 
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
-ipcMain.on('async-crawl', async (event, arg) => {
-  console.log("async-crawl event");
-  await initiate(arg);
-});
 
-ipcMain.on('new-link-visited', (event, arg) => {
-  console.log("IPC Main: new-link-visited; ", arg);
+ipcMain.on('console-display', (event, arg) => {
+  console.log(arg);
+  event.returnValue = "Sent to main console";
 })
