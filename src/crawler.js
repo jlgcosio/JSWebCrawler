@@ -9,7 +9,7 @@ async function initiate(url) {
 	console.log("Launched Browser");
 	// Rewrite url to proper format for browsing
 	if (!url.includes("http")) {
-		url = "http://" + url;
+		url = "https://" + url;
 	}
 	// Instatiate Arrays
 	var sitemap = [];
@@ -26,34 +26,34 @@ async function initiate(url) {
 		if (visited.includes(u)) {
 			return;
 		} else {
-			try {
-				console.log("Creating new page");
-				const tab = await browser.newPage();
-				console.log("Opening: ", u);
-				await tab.goto(u);
-				await tab.waitForTimeout(1000);
+			console.log("Creating new page");
+			const tab = await browser.newPage();
+			console.log("Opening: ", u);
+			await tab.goto(u, { waitUntil: "load", timeout: 0 });
+			await tab.waitForTimeout(2000);
 
-				visited.push(u);
+			visited.push(u);
 
-				const getLinks = await tab.evaluate(() => {
-					var links = document.querySelectorAll("a");
-					links.forEach((link) => {
-						const ripped = link.getAttribute("href");
-						var nonRelativeUrl = new URL(ripped, baseUrl).href;
-						if (nonRelativeUrl.includes(baseUrl)) {
-							sitemap.push(nonRelativeUrl);
-						}
-					});
-					ipcRenderer.send("new-link-visited", u);
-                    return links;
+			const getLinks = await tab.evaluate((base) => {
+				var links = document.querySelectorAll("a");
+				var pageHrefs = [];
+				links.forEach((link) => {
+					const ripped = link.getAttribute("href");
+					var nonRelativeUrl = new URL(ripped, base).href;
+					if (nonRelativeUrl.includes(new URL(base).hostname)) {
+						pageHrefs.push(nonRelativeUrl);
+					}
 				});
-                console.log(getLinks);
-				currPageInSiteMap++;
-				tab.close();
-				extractAllLinks(sitemap[currPageInSiteMap]);
-			} catch (error) {
-				console.log(error);
-			}
+				return pageHrefs;
+			}, baseUrl);
+
+			getLinks.forEach((link) => {
+				sitemap.push(link);
+			});
+			ipcRenderer.sendSync("new-link-visited", u);
+			currPageInSiteMap++;
+			tab.close();
+			await extractAllLinks(sitemap[currPageInSiteMap]);
 		}
 	};
 
