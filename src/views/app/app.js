@@ -6,22 +6,6 @@ function getUrl() {
 	return urlBox.value;
 }
 
-function getFilterList() {
-	var filterInput = document.getElementById("filterInput");
-	return filterInput.value.split("\n");
-}
-
-function countContentCompliance(content) {
-	const filter = getFilterList();
-	var filterCount = 0;
-	filter.forEach((item) => {
-		if (content.toLowerCase().indexOf(item) != -1) {
-			filterCount++;
-		}
-	});
-	return filterCount;
-}
-
 function addToList(href, compliant = true, filterCount = 0) {
 	var list = document.getElementById("linkList");
 	var item = document.createElement("li");
@@ -120,7 +104,9 @@ async function initiate() {
 	// Instatiate Arrays
 	var sitemap = [];
 	var currPageInSiteMap = 0;
-	var complianceCount = 0;
+    var filterInput = document
+					.getElementById("filterInput")
+					.value.split("\n");
 
 	// Set domain and initial search target;
 	var baseUrl = new URL(url);
@@ -141,7 +127,7 @@ async function initiate() {
 
 			const currentPage = await tab.url();
 
-			const getLinks = await tab.evaluate((base) => {
+			const getLinks = await tab.evaluate((base, filterInput) => {
 				var links = document.querySelectorAll("a");
 				var pageHrefs = [];
 				links.forEach((link) => {
@@ -157,22 +143,19 @@ async function initiate() {
 				});
 
                 var content = document.body.innerHTML;
-                console.log(content);
-				var filterInput = document
-					.getElementById("filterInput")
-					.value.split("\n");
+                var complianceCount = 0;
 				filterInput.forEach((item) => {
 					if (content.toLowerCase().indexOf(item) != -1) {
 						complianceCount++;
 					}
 				});
 				// Add to gui list
-				return pageHrefs;
-			}, currentPage);
+				return {pageHrefs, complianceCount};
+			}, currentPage, filterInput);
 
-			addToList(u, complianceCount > 0 ? false : true, complianceCount);
+			addToList(u, getLinks.complianceCount > 0 ? false : true);
 			// Double check if items in current evaluation are already in sitemap
-			getLinks.forEach((link) => {
+			getLinks.pageHrefs.forEach((link) => {
 				if (!sitemap.includes(link)) {
 					sitemap.push(link);
 				}
