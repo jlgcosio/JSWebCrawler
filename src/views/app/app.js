@@ -20,12 +20,6 @@ function clearList() {
     list.innerHTML = "";
 }
 
-ipcRenderer.on("update-visited-links", (event, arg) => {
-	if (arg) {
-		console.log("NOT EMPTY LIST");
-	}
-});
-
 async function initiate() {
     // Clear current list
     clearList();
@@ -83,28 +77,24 @@ async function initiate() {
 				return pageHrefs;
 			}, currentPage);
 
-			// visited.push(currentPage);
+            // Add to gui list
 			addToList(u);
 
+            // Double check if items in current evaluation are already in sitemap
 			getLinks.forEach((link) => {
 				if (!sitemap.includes(link)) {
 					sitemap.push(link);
 				}
 			});
+            // Move to next item in sitemap
 			currPageInSiteMap++;
 			tab.close();
-            // console.log(`Current Page: ${u}`);
-			// console.log(`Sitemap Length: ${sitemap.length}`);
-            // console.log(`Index of Current Page: ${sitemap.indexOf(u)}`);
-            // console.log(`Next Index: ${currPageInSiteMap}`);
 			await extractAllLinks(sitemap[currPageInSiteMap]);
 		}
 	};
 
 	// Call for actual crawling
-	console.log(`Extracting all links of ${baseUrl}`);
 	await extractAllLinks(baseUrl);
-	console.log("Extraction End");
 	// Close browser instance
 	await browser.close();
 
