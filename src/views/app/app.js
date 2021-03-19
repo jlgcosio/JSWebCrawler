@@ -6,76 +6,102 @@ function getUrl() {
 	return urlBox.value;
 }
 
-function addToList(href) {
+function getFilterList() {
+	var filterInput = document.getElementById("filterInput");
+	return filterInput.value.split("\n");
+}
+
+function countContentCompliance(content) {
+	const filter = getFilterList();
+	var filterCount = 0;
+	filter.forEach((item) => {
+		if (content.toLowerCase().indexOf(item) != -1) {
+			filterCount++;
+		}
+	});
+	return filterCount;
+}
+
+function addToList(href, compliant = true, filterCount = 0) {
 	var list = document.getElementById("linkList");
 	var item = document.createElement("li");
-	item.setAttribute("class", "list-group-item");
-	item.innerHTML = href;
+	if (!compliant) {
+		item.setAttribute("class", "list-group-item list-group-item-danger");
+		var filterBadge = document.createElement("span");
+		filterBadge.setAttribute("class", "badge badge-primary badge-pill");
+		filterBadge.innerHTML = filterCount;
+
+		item.appendChild(filterBadge);
+	} else {
+		item.setAttribute("class", "list-group-item");
+	}
+	item.innerText = href;
 
 	list.appendChild(item);
 }
 
 function clearInfo() {
-    var list = document.getElementById("linkList");
-    list.innerHTML = "";
+	var list = document.getElementById("linkList");
+	list.innerHTML = "";
 
-    var infoSection = document.getElementById('infoSection');
-    infoSection.innerHTML = "";
+	var infoSection = document.getElementById("infoSection");
+	infoSection.innerHTML = "";
 
-    var totalVisitedCounter = document.getElementById('linksVisited');
-    totalVisitedCounter.innerHTML = "";
+	var totalVisitedCounter = document.getElementById("linksVisited");
+	totalVisitedCounter.innerHTML = "";
 }
 
 function updateTotalLinks(total) {
-    var totalLinksCounter = document.getElementById('totalLinks');
-    totalLinksCounter.innerHTML = total;
+	var totalLinksCounter = document.getElementById("totalLinks");
+	totalLinksCounter.innerHTML = total;
 }
 
 function updateTotalVisited(number) {
-    var totalVisitedCounter = document.getElementById('linksVisited');
-    totalVisitedCounter.innerHTML = number;
+	var totalVisitedCounter = document.getElementById("linksVisited");
+	totalVisitedCounter.innerHTML = number;
 }
 
-function toggleInfoComplete(){
-    var infoPanel = document.getElementById('infoPanel');
-    infoPanel.setAttribute('class', 'alert alert-success');
+function toggleInfoComplete() {
+	var infoPanel = document.getElementById("infoPanel");
+	infoPanel.setAttribute("class", "alert alert-success");
 
-    var infoSuccess = document.createElement('p');
-    infoPanel.textContent = "Complete";
+	var infoSuccess = document.createElement("p");
+	infoPanel.textContent = "Complete";
 
-    var line = document.createElement('hr');
+	var line = document.createElement("hr");
 
-    infoPanel.appendChild(line);
-    infoPanel.appendChild(infoSuccess);
+	infoPanel.appendChild(line);
+	infoPanel.appendChild(infoSuccess);
 }
 
-function showInfo(url){
-    var infoSection = document.getElementById('infoSection');
+function showInfo(url) {
+	var infoSection = document.getElementById("infoSection");
 
-    var infoPanel = document.createElement('div');
-    infoPanel.setAttribute('class', 'alert alert-primary');
-    infoPanel.setAttribute('id', 'infoPanel');
-    infoPanel.setAttribute('role', 'alert');
+	var infoPanel = document.createElement("div");
+	infoPanel.setAttribute("class", "alert alert-primary");
+	infoPanel.setAttribute("id", "infoPanel");
+	infoPanel.setAttribute("role", "alert");
 
-    var infoPanelHeader = document.createElement('h4');
-    infoPanelHeader.setAttribute('class', 'alert-header');
-    infoPanelHeader.textContent = `Crawling through webiste: ${url}`;
+	var infoPanelHeader = document.createElement("h4");
+	infoPanelHeader.setAttribute("class", "alert-header");
+	infoPanelHeader.textContent = `Crawling through webiste: ${url}`;
 
-    var line = document.createElement('hr');
+	var line = document.createElement("hr");
 
-    var infoTotalCount = document.createElement('p');
-    infoTotalCount.innerHTML = 'Total links gathered: <span id="totalLinks" class="badge badge-primary badge-pill">0</span>';
+	var infoTotalCount = document.createElement("p");
+	infoTotalCount.innerHTML =
+		'Total links gathered: <span id="totalLinks" class="badge badge-primary badge-pill">0</span>';
 
-    infoPanel.appendChild(infoPanelHeader);
-    infoPanel.appendChild(line);
-    infoPanel.appendChild(infoTotalCount);
+	infoPanel.appendChild(infoPanelHeader);
+	infoPanel.appendChild(line);
+	infoPanel.appendChild(infoTotalCount);
 
-    infoSection.appendChild(infoPanel);
+	infoSection.appendChild(infoPanel);
 }
 
 async function initiate() {
-    // Clear current list
-    clearInfo();
+	// Clear current list
+	clearInfo();
 
 	var url = getUrl();
 
@@ -89,13 +115,14 @@ async function initiate() {
 	if (!url.includes("http")) {
 		url = "https://" + url;
 	}
-    showInfo(url);
+	showInfo(url);
 
 	// Instatiate Arrays
 	var sitemap = [];
 	var currPageInSiteMap = 0;
+	var complianceCount = 0;
 
-    // Set domain and initial search target;
+	// Set domain and initial search target;
 	var baseUrl = new URL(url);
 	baseUrl = baseUrl.href;
 
@@ -104,7 +131,7 @@ async function initiate() {
 	// Check valid links and visit all
 	const extractAllLinks = async (u) => {
 		if (currPageInSiteMap == sitemap.length) {
-            console.log("Reached end of sitemap");
+			console.log("Reached end of sitemap");
 			return;
 		} else {
 			const tab = await browser.newPage();
@@ -116,35 +143,45 @@ async function initiate() {
 
 			const getLinks = await tab.evaluate((base) => {
 				var links = document.querySelectorAll("a");
-				console.log(links);
 				var pageHrefs = [];
 				links.forEach((link) => {
 					const ripped = link.getAttribute("href");
 					var nonRelativeUrl = new URL(ripped, base).href;
 					if (
 						nonRelativeUrl.includes(new URL(base).hostname) &&
-						(!nonRelativeUrl.includes("#") &&
-							!nonRelativeUrl.includes("null"))
+						!nonRelativeUrl.includes("#") &&
+						!nonRelativeUrl.includes("null")
 					) {
 						pageHrefs.push(nonRelativeUrl);
 					}
 				});
+
+                var content = document.body.innerHTML;
+                console.log(content);
+				var filterInput = document
+					.getElementById("filterInput")
+					.value.split("\n");
+				filterInput.forEach((item) => {
+					if (content.toLowerCase().indexOf(item) != -1) {
+						complianceCount++;
+					}
+				});
+				// Add to gui list
 				return pageHrefs;
 			}, currentPage);
 
-            // Add to gui list
-			addToList(u);
-
-            // Double check if items in current evaluation are already in sitemap
+			addToList(u, complianceCount > 0 ? false : true, complianceCount);
+			// Double check if items in current evaluation are already in sitemap
 			getLinks.forEach((link) => {
 				if (!sitemap.includes(link)) {
 					sitemap.push(link);
 				}
 			});
-            // Move to next item in sitemap
+			// Move to next item in sitemap
 			currPageInSiteMap++;
-            updateTotalLinks(sitemap.length);
-            updateTotalVisited(currPageInSiteMap);
+			updateTotalLinks(sitemap.length);
+			updateTotalVisited(currPageInSiteMap);
+			complianceCount = 0;
 			tab.close();
 			await extractAllLinks(sitemap[currPageInSiteMap]);
 		}
@@ -155,6 +192,6 @@ async function initiate() {
 	// Close browser instance
 	await browser.close();
 
-    toggleInfoComplete();
+	toggleInfoComplete();
 	ipcRenderer.sendSync("console-display", sitemap);
 }
