@@ -1,6 +1,26 @@
 const { ipcRenderer } = require("electron");
 const pup = require("puppeteer");
 
+var cancelledOperation = false;
+
+function toggleCancel(){
+    cancelledOperation = !cancelledOperation;
+    var cancelButton = document.getElementById('cancelButton');
+    if(cancelledOperation){
+        cancelButton.innerHTML = "Cancelling operation...";
+        console.log("Cancelling");
+    }
+    else{
+        cancelButton.innerHTML = "Cancel"
+    }
+    return;
+}
+
+function toggleCancelButton() {
+    var cancelButton = document.getElementById('cancelButton');
+    cancelButton.hidden = !cancelButton.hidden;
+}
+
 function getUrl() {
 	var urlBox = document.getElementById("urlInput");
 	return urlBox.value;
@@ -52,9 +72,6 @@ function toggleInfoComplete() {
 	var infoSuccess = document.createElement("p");
 	infoPanel.textContent = "Complete";
 
-	var line = document.createElement("hr");
-
-	infoPanel.appendChild(line);
 	infoPanel.appendChild(infoSuccess);
 }
 
@@ -68,7 +85,7 @@ function showInfo(url) {
 
 	var infoPanelHeader = document.createElement("h4");
 	infoPanelHeader.setAttribute("class", "alert-header");
-	infoPanelHeader.textContent = `Crawling through webiste: ${url}`;
+	infoPanelHeader.textContent = `Crawling through website: ${url}`;
 
 	var line = document.createElement("hr");
 
@@ -113,13 +130,20 @@ async function initiate() {
 	baseUrl = baseUrl.href;
 
 	sitemap.push(baseUrl);
+    toggleCancelButton();
 
 	// Check valid links and visit all
 	const extractAllLinks = async (u) => {
 		if (currPageInSiteMap == sitemap.length) {
 			console.log("Reached end of sitemap");
 			return;
-		} else {
+		}
+        else if(cancelledOperation){
+            toggleCancel();
+            toggleCancelButton();
+            return;
+        }
+        else {
 			const tab = await browser.newPage();
 			console.log("Opening: ", u);
 			await tab.goto(u, { waitUntil: "load", timeout: 0 });
