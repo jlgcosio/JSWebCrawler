@@ -1,8 +1,8 @@
 {
   "name": "crawlerjs",
   "productName": "Web Crawler",
-  "version": "1.0.0",
-  "description": "My Electron application description",
+  "version": "1.0.1",
+  "description": "Web Crawler with content filters for monitoring",
   "main": "src/index.js",
   "scripts": {
     "start": "electron-forge start",
@@ -46,6 +46,7 @@
   },
   "dependencies": {
     "electron-squirrel-startup": "^1.0.0",
+    "electron-store": "^7.0.3",
     "puppeteer": "^8.0.0"
   },
   "devDependencies": {
