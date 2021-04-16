@@ -1,7 +1,9 @@
 const { ipcRenderer } = require("electron");
 const pup = require("puppeteer");
+const Store = require('electron-store');
 
 var cancelledOperation = false;
+var store = new Store();
 
 function toggleCancel(){
     cancelledOperation = !cancelledOperation;
@@ -16,12 +18,12 @@ function toggleCancel(){
     return;
 }
 
-function toggleCancelButton() {
+function toggleCancelButtonVisibility() {
     var cancelButton = document.getElementById('cancelButton');
     cancelButton.hidden = !cancelButton.hidden;
 }
 
-function getUrl() {
+function getUrlInput() {
 	var urlBox = document.getElementById("urlInput");
 	return urlBox.value;
 }
@@ -70,7 +72,7 @@ function toggleInfoComplete() {
 	infoPanel.setAttribute("class", "alert alert-success");
 
 	var infoSuccess = document.createElement("p");
-	infoPanel.textContent = "Complete";
+	infoSuccess.textContent = "Operation complete. Check the Reports tab for a full list of links filtered by your selected Keywords or phrases.";
 
 	infoPanel.appendChild(infoSuccess);
 }
@@ -100,11 +102,25 @@ function showInfo(url) {
 	infoSection.appendChild(infoPanel);
 }
 
+function fillReportList(links = []){
+	var reportList = document.getElementById('reportList');
+	reportList.innerHTML = "";
+
+	links.forEach(link => {
+		var item = document.createElement('button');
+		item.setAttribute('type', 'button');
+		item.setAttribute('class', 'list-group-item list-group-action');
+		item.innerText = link;
+
+		reportList.appendChild(item);
+	});
+}
+
 async function initiate() {
 	// Clear current list
 	clearInfo();
 
-	var url = getUrl();
+	var url = getUrlInput();
 
 	// Launch Browser in non-visual mode
 	const browser = await pup.launch({
@@ -130,7 +146,7 @@ async function initiate() {
 	baseUrl = baseUrl.href;
 
 	sitemap.push(baseUrl);
-    toggleCancelButton();
+    toggleCancelButtonVisibility();
 
 	// Check valid links and visit all
 	const extractAllLinks = async (u) => {
@@ -140,7 +156,7 @@ async function initiate() {
 		}
         else if(cancelledOperation){
             toggleCancel();
-            toggleCancelButton();
+            toggleCancelButtonVisibility();
             return;
         }
         else {
@@ -166,15 +182,18 @@ async function initiate() {
 					}
 				});
 
-                var content = document.body.innerHTML;
+                var documentBody = document.body.innerHTML;
                 var complianceCount = 0;
+
+				var nonCompliantURL = '';
 				filterInput.forEach((item) => {
-					if (content.toLowerCase().indexOf(item) != -1) {
+					if (documentBody.toLowerCase().indexOf(item) != -1) {
 						complianceCount++;
+						nonCompliantURL = base;
 					}
 				});
 				// Add to gui list
-				return {pageHrefs, complianceCount};
+				return {pageHrefs, complianceCount, nonCompliantURL};
 			}, currentPage, filterInput);
 
 			addToList(u, getLinks.complianceCount > 0 ? false : true);
@@ -184,11 +203,28 @@ async function initiate() {
 					sitemap.push(link);
 				}
 			});
+
+			var storedReport = store.get('currentAvailableReport');
+			if(storedReport === undefined){
+				var initializeReportList = [
+					getLinks.nonCompliantURL
+				];
+				store.set('currentAvailableReport', initializeReportList);
+			}
+			else{
+				// Add non-compliant url if not already in storage
+				if(!storedReport.includes(getLinks.nonCompliantURL)){
+					storedReport.push(getLinks.nonCompliantURL);
+					store.set('currentAvailableReport', storedReport);
+					console.log(`URLdded to Report: ${getLinks.nonCompliantURL}`);
+				}
+			}
+
 			// Move to next item in sitemap
 			currPageInSiteMap++;
 			updateTotalLinks(sitemap.length);
 			updateTotalVisited(currPageInSiteMap);
-			complianceCount = 0;
+
 			tab.close();
 			await extractAllLinks(sitemap[currPageInSiteMap]);
 		}
@@ -199,6 +235,11 @@ async function initiate() {
 	// Close browser instance
 	await browser.close();
 
+	// Fill out non-compliant list
+	if(store.get('currentAvailableReport') !== undefined){
+		fillReportList(store.get('currentAvailableReport'));
+	}
+
 	toggleInfoComplete();
-	ipcRenderer.sendSync("console-display", sitemap);
+	ipcRenderer.sendSync("console-display", store.get('currentAvailableReport'));
 }
