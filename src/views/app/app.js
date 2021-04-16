@@ -1,26 +1,25 @@
 const { ipcRenderer } = require("electron");
 const pup = require("puppeteer");
-const Store = require('electron-store');
+const Store = require("electron-store");
 
 var cancelledOperation = false;
 var store = new Store();
 
-function toggleCancel(){
-    cancelledOperation = !cancelledOperation;
-    var cancelButton = document.getElementById('cancelButton');
-    if(cancelledOperation){
-        cancelButton.innerHTML = "Cancelling operation...";
-        console.log("Cancelling");
-    }
-    else{
-        cancelButton.innerHTML = "Cancel"
-    }
-    return;
+function toggleCancel() {
+	cancelledOperation = !cancelledOperation;
+	var cancelButton = document.getElementById("cancelButton");
+	if (cancelledOperation) {
+		cancelButton.innerHTML = "Cancelling operation...";
+		console.log("Cancelling");
+	} else {
+		cancelButton.innerHTML = "Cancel";
+	}
+	return;
 }
 
 function toggleCancelButtonVisibility() {
-    var cancelButton = document.getElementById('cancelButton');
-    cancelButton.hidden = !cancelButton.hidden;
+	var cancelButton = document.getElementById("cancelButton");
+	cancelButton.hidden = !cancelButton.hidden;
 }
 
 function getUrlInput() {
@@ -38,6 +37,19 @@ function addToList(href, compliant = true, filterCount = 0) {
 		filterBadge.innerHTML = filterCount;
 
 		item.appendChild(filterBadge);
+
+		// Add non-compliant url if not already in storage
+		var storedReport = store.get("currentAvailableReport");
+		if (storedReport === undefined) {
+			var initializeReportList = [href];
+			store.set("currentAvailableReport", initializeReportList);
+		} else {
+			if (!storedReport.includes(href)) {
+				storedReport.push(href);
+				store.set("currentAvailableReport", storedReport);
+				console.log(`URLdded to Report: ${href}`);
+			}
+		}
 	} else {
 		item.setAttribute("class", "list-group-item");
 	}
@@ -72,9 +84,28 @@ function toggleInfoComplete() {
 	infoPanel.setAttribute("class", "alert alert-success");
 
 	var infoSuccess = document.createElement("p");
-	infoSuccess.textContent = "Operation complete. Check the Reports tab for a full list of links filtered by your selected Keywords or phrases.";
+	infoSuccess.textContent =
+		"Operation complete. Check the Reports tab for a full list of links filtered by your selected Keywords or phrases.";
 
 	infoPanel.appendChild(infoSuccess);
+
+	/**
+	 * Dynamic change of 'mailto' link on email input
+	 */
+	document
+		.getElementById("emailInputField")
+		.addEventListener("change", (evnt) => {
+			var email = document.getElementById("emailInputField").value;
+			document
+				.getElementById("submitEmailButton")
+				.setAttribute(
+					"href",
+					generateReportEmail(
+						email,
+						store.get("currentAvailableReport")
+					)
+				);
+		});
 }
 
 function showInfo(url) {
@@ -102,14 +133,13 @@ function showInfo(url) {
 	infoSection.appendChild(infoPanel);
 }
 
-function fillReportList(links = []){
-	var reportList = document.getElementById('reportList');
+function fillReportList(links = []) {
+	var reportList = document.getElementById("reportList");
 	reportList.innerHTML = "";
 
-	links.forEach(link => {
-		var item = document.createElement('button');
-		item.setAttribute('type', 'button');
-		item.setAttribute('class', 'list-group-item list-group-action');
+	links.forEach((link) => {
+		var item = document.createElement("li");
+		item.setAttribute("class", "list-group-item");
 		item.innerText = link;
 
 		reportList.appendChild(item);
@@ -119,6 +149,7 @@ function fillReportList(links = []){
 async function initiate() {
 	// Clear current list
 	clearInfo();
+	store.delete("currentAvailableReport"); // Clear out the stored list
 
 	var url = getUrlInput();
 
@@ -137,29 +168,25 @@ async function initiate() {
 	// Instatiate Arrays
 	var sitemap = [];
 	var currPageInSiteMap = 0;
-    var filterInput = document
-					.getElementById("filterInput")
-					.value.split("\n");
+	var filterInput = document.getElementById("filterInput").value.split("\n");
 
 	// Set domain and initial search target;
 	var baseUrl = new URL(url);
 	baseUrl = baseUrl.href;
 
 	sitemap.push(baseUrl);
-    toggleCancelButtonVisibility();
+	toggleCancelButtonVisibility();
 
 	// Check valid links and visit all
 	const extractAllLinks = async (u) => {
 		if (currPageInSiteMap == sitemap.length) {
 			console.log("Reached end of sitemap");
 			return;
-		}
-        else if(cancelledOperation){
-            toggleCancel();
-            toggleCancelButtonVisibility();
-            return;
-        }
-        else {
+		} else if (cancelledOperation) {
+			toggleCancel();
+			toggleCancelButtonVisibility();
+			return;
+		} else {
 			const tab = await browser.newPage();
 			console.log("Opening: ", u);
 			await tab.goto(u, { waitUntil: "load", timeout: 0 });
@@ -167,34 +194,38 @@ async function initiate() {
 
 			const currentPage = await tab.url();
 
-			const getLinks = await tab.evaluate((base, filterInput) => {
-				var links = document.querySelectorAll("a");
-				var pageHrefs = [];
-				links.forEach((link) => {
-					const ripped = link.getAttribute("href");
-					var nonRelativeUrl = new URL(ripped, base).href;
-					if (
-						nonRelativeUrl.includes(new URL(base).hostname) &&
-						!nonRelativeUrl.includes("#") &&
-						!nonRelativeUrl.includes("null")
-					) {
-						pageHrefs.push(nonRelativeUrl);
-					}
-				});
+			const getLinks = await tab.evaluate(
+				(base, filterInput) => {
+					var links = document.querySelectorAll("a");
+					var pageHrefs = [];
+					links.forEach((link) => {
+						const ripped = link.getAttribute("href");
+						var nonRelativeUrl = new URL(ripped, base).href;
+						if (
+							nonRelativeUrl.includes(new URL(base).hostname) &&
+							!nonRelativeUrl.includes("#") &&
+							!nonRelativeUrl.includes("null")
+						) {
+							pageHrefs.push(nonRelativeUrl);
+						}
+					});
 
-                var documentBody = document.body.innerHTML;
-                var complianceCount = 0;
+					var documentBody = document.body.innerHTML;
+					var complianceCount = 0;
 
-				var nonCompliantURL = '';
-				filterInput.forEach((item) => {
-					if (documentBody.toLowerCase().indexOf(item) != -1) {
-						complianceCount++;
-						nonCompliantURL = base;
-					}
-				});
-				// Add to gui list
-				return {pageHrefs, complianceCount, nonCompliantURL};
-			}, currentPage, filterInput);
+					var nonCompliantURL = "";
+					filterInput.forEach((item) => {
+						if (documentBody.toLowerCase().indexOf(item) != -1) {
+							complianceCount++;
+							nonCompliantURL = base;
+						}
+					});
+					// Add to gui list
+					return { pageHrefs, complianceCount, nonCompliantURL };
+				},
+				currentPage,
+				filterInput
+			);
 
 			addToList(u, getLinks.complianceCount > 0 ? false : true);
 			// Double check if items in current evaluation are already in sitemap
@@ -203,22 +234,6 @@ async function initiate() {
 					sitemap.push(link);
 				}
 			});
-
-			var storedReport = store.get('currentAvailableReport');
-			if(storedReport === undefined){
-				var initializeReportList = [
-					getLinks.nonCompliantURL
-				];
-				store.set('currentAvailableReport', initializeReportList);
-			}
-			else{
-				// Add non-compliant url if not already in storage
-				if(!storedReport.includes(getLinks.nonCompliantURL)){
-					storedReport.push(getLinks.nonCompliantURL);
-					store.set('currentAvailableReport', storedReport);
-					console.log(`URLdded to Report: ${getLinks.nonCompliantURL}`);
-				}
-			}
 
 			// Move to next item in sitemap
 			currPageInSiteMap++;
@@ -236,10 +251,20 @@ async function initiate() {
 	await browser.close();
 
 	// Fill out non-compliant list
-	if(store.get('currentAvailableReport') !== undefined){
-		fillReportList(store.get('currentAvailableReport'));
+	if (store.get("currentAvailableReport") !== undefined) {
+		fillReportList(store.get("currentAvailableReport"));
 	}
 
 	toggleInfoComplete();
-	ipcRenderer.sendSync("console-display", store.get('currentAvailableReport'));
+	ipcRenderer.sendSync(
+		"console-display",
+		store.get("currentAvailableReport")
+	);
+}
+
+function generateReportEmail(email = "", bodyContent = [""]) {
+	const newLine = "%0A";
+	var body = bodyContent.join(newLine);
+
+	return `mailto:${email}?body=${body}`;
 }
