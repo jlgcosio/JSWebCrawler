@@ -182,6 +182,12 @@ async function initiate() {
     } else if (cancelledOperation) {
       toggleCancel();
       toggleCancelButtonVisibility();
+
+      // Fill out non-compliant list
+      if (store.get("currentAvailableReport") !== undefined) {
+        fillReportList(store.get("currentAvailableReport"));
+      }
+
       return;
     } else {
       try {
@@ -196,15 +202,22 @@ async function initiate() {
           (base, filterInput) => {
             var links = document.querySelectorAll("a");
             var pageHrefs = [];
+
+            // File format check
+            const containsFile =
+              /\.(jpg|gif|doc|pdf|docx|odm|csv|xlsx|png|webm|mp4|mov|)$/im;
+
             links.forEach((link) => {
               const ripped = link.getAttribute("href");
               var nonRelativeUrl = new URL(ripped, base).href;
               if (
                 nonRelativeUrl.includes(new URL(base).hostname) &&
-                !nonRelativeUrl.includes("#") &&
-                !nonRelativeUrl.includes("null")
+                !nonRelativeUrl.includes("null") &&
+                !containsFile.test(nonRelativeUrl)
               ) {
                 pageHrefs.push(nonRelativeUrl);
+              } else {
+                console.log("Unusable link: ", nonRelativeUrl);
               }
             });
 
@@ -241,6 +254,7 @@ async function initiate() {
         tab.close();
         await extractAllLinks(sitemap[currPageInSiteMap]);
       } catch (error) {
+        console.log(error);
         ipcRenderer.sendSync("console-display", error);
       }
     }
