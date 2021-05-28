@@ -1,11 +1,12 @@
-const { app, BrowserWindow, ipcMain } = require('electron');
-const path = require('path');
-const Store = require('electron-store');
+const { app, BrowserWindow, ipcMain } = require("electron");
+const path = require("path");
+const Store = require("electron-store");
 
 Store.initRenderer();
 
 // Handle creating/removing shortcuts on Windows when installing/uninstalling.
-if (require('electron-squirrel-startup')) { // eslint-disable-line global-require
+if (require("electron-squirrel-startup")) {
+  // eslint-disable-line global-require
   app.quit();
 }
 
@@ -17,13 +18,13 @@ const createWindow = () => {
     webPreferences: {
       nodeIntegration: true,
       contextIsolation: false,
-      devTools: false
+      devTools: true,
     },
-    resizable: false
+    resizable: false,
   });
 
   // and load the index.html of the app.
-  mainWindow.loadFile(path.join(__dirname, '/views/app/app.html'));
+  mainWindow.loadFile(path.join(__dirname, "/views/app/app.html"));
   // Open the DevTools.
   // mainWindow.webContents.openDevTools();
 };
@@ -31,18 +32,18 @@ const createWindow = () => {
 // This method will be called when Electron has finished
 // initialization and is ready to create browser windows.
 // Some APIs can only be used after this event occurs.
-app.on('ready', createWindow);
+app.on("ready", createWindow);
 
 // Quit when all windows are closed, except on macOS. There, it's common
 // for applications and their menu bar to stay active until the user quits
 // explicitly with Cmd + Q.
-app.on('window-all-closed', () => {
-  if (process.platform !== 'darwin') {
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
     app.quit();
   }
 });
 
-app.on('activate', () => {
+app.on("activate", () => {
   // On OS X it's common to re-create a window in the app when the
   // dock icon is clicked and there are no other windows open.
   if (BrowserWindow.getAllWindows().length === 0) {
@@ -53,7 +54,7 @@ app.on('activate', () => {
 // In this file you can include the rest of your app's specific main process
 // code. You can also put them in separate files and import them here.
 
-ipcMain.on('console-display', (event, arg) => {
+ipcMain.on("console-display", (event, arg) => {
   console.log(arg);
   event.returnValue = "Sent to main console";
-})
+});
